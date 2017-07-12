@@ -1,5 +1,63 @@
 #! /bin/bash
 # $Id: genproxy,v 1.2 2008/11/10 14:43:39 janjust Exp $
+# $Id: genproxy,v 1.3 2016/08/16 fs $
+# 2016-08-16 Frank Scheiner (HLRS):
+# * Updated defaults
+# * added printout of GSI proxy credential filename and path
+# * changed handling of info and debug messages in the code
+# * removed OpenSSL version check, assuming we will always use a version
+#   >= 0.9.8
+#
+# New defaults:
+# * 1024 bits for the generated private key of the GSI proxy credential
+# * creates RFC 3820 compliant GSI proxy credentials
+#
+# $Id: genproxy,v 1.4 2016/10/13 fs $
+# 2016-10-13 Frank Scheiner (HLRS):
+# * output is now closer to output from `grid-proxy-init`
+# * added error message for wrong passphrase (identical to error output
+#   of `grid-proxy-init`)
+#
+# $Id: genproxy,v 1.5 2016/10/18 fs $
+# 2016-10-18 Frank Scheiner (HLRS):
+# * the generated GSI proxy credential (GPC) is now created by mktemp
+#   beforehand to fight symlink attacks in `/tmp`. If needed the name
+#   and path of the GPC can still be configured by using the environment
+#   variable `X509_USER_PROXY`.
+#
+# $Id: genproxy,v 1.6 2017/07/12 fs $
+# 2017-07-12 Frank Scheiner (HLRS)
+# * Added copyright statement and license with consent of Jan Just Keijser
+#   from 2017-07-06.
+# * the "-o" option was deactivated by accident in v1.5. This option now
+#   works again and takes precedence over the setting of the environment
+#   variable `X509_USER_PROXY`.
+
+:<<COPYRIGHT
+
+Copyright (C) 2008 Jan Just Keijser, Nikhef
+Copyright (C) 2016-2017 Frank Scheiner, HLRS, Universitaet Stuttgart
+
+The program is distributed under the terms of the GNU General Public License
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+COPYRIGHT
+
+###############################################################################
+# FUNCTIONS
+###############################################################################
 
 function debug()
 {
@@ -19,29 +77,26 @@ function info()
 
 function run_cmd()
 {
+    local exitcode=0
     if [ -n "${DEBUG:-}" ]
     then
         echo -e "run_cmd: $@"
-    fi
-    if [ -n "${QUIET:-}" ]
-    then
-        cmd_output=`eval "$@" 2>&1`
+	eval "$@" 1>$MESSAGES 2>&1
         exitcode=$?
-        if [ $exitcode -ne 0 ]
-        then
-            echo "$cmd_output" >&2
-        fi
     else
-        eval "$@"
+        eval "$@" 1>$MESSAGES 2>&1
         exitcode=$?
     fi
     return $exitcode
 }
 
+###############################################################################
+# MAIN
+###############################################################################
 
-VERSION="genproxy version 1.1"
+VERSION="genproxy version 1.6"
 USAGE="\
-This script will generate a X509 grid proxy pretty much like globus' grid-proxy-init
+This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
   Options
   [--help]          Displays usage.
@@ -49,13 +104,13 @@ This script will generate a X509 grid proxy pretty much like globus' grid-proxy-
   [--debug]         Enables extra debug output.
   [--quiet]         Quiet mode, minimal output.
   [--limited]       Creates a limited globus proxy.
-  [--old]           Creates a legacy globus proxy (default).
+  [--old]           Creates a legacy globus proxy.
   [--gt3]           Creates a pre-RFC3820 compliant proxy.
-  [--rfc]           Creates a RFC3820 compliant proxy.
+  [--rfc]           Creates a RFC3820 compliant proxy (default).
   [--days=N]        Number of days the proxy is valid (default=1).
   [--path-length=N] Allow a chain of at most N proxies to be generated
                     from this one (default=2).
-  [--bits=N]        Number of bits in key (512, 1024, 2048, default=512).
+  [--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
   [--cert=certfile] Non-standard location of user certificate.
   [--key=keyfile]   Non-standard location of user key.
   [--out=proxyfile] Non-standard location of new proxy cert.
@@ -105,13 +160,13 @@ do
 						;;
 		(--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
 						;;
-		(--version|-v)	echo "$VERSION"
+		(--version|-V)		echo "$VERSION"
 						exit 0
 						;;
 		(--debug)		DEBUG=1
 						QUIET=
 						;;
-		(--quiet|-q)	QUIET=1
+		(--quiet|-q)		QUIET=1
 						DEBUG=
 						;;
 		(--limited)		PROXY_POLICY=limited_policy
@@ -129,53 +184,47 @@ do
 						;;
 	 	(*)				echo "$VERSION"
 						echo "$USAGE"
-						exit 0	
+						exit 0
 						;;
 	esac
 	shift
 done
 
-info "Starting proxy generation"
+#info "Starting proxy generation"
 
 # Apply defaults
 DAYS=${DAYS:-1}
 #VALID=${VALID:-12:00}
-PROXY_SUGGEST=/tmp/x509up_u`id -u`
-PROXY="${X509_USERPROXY:-$PROXY_SUGGEST}"
+if [[ ! -z "$X509_USERPROXY" ]]; then
+
+	PROXY="$X509_USERPROXY"
+
+elif [[ ! -z "$X509_USER_PROXY" ]]; then
+
+	PROXY="$X509_USER_PROXY"
+else
+	PROXY_SUGGEST_START="x509up_p$$"
+	PROXY_SUGGEST=$( mktemp --tmpdir="/tmp" ${PROXY_SUGGEST_START}.fileXXXXXX.1 )
+	PROXY="$PROXY_SUGGEST"
+fi
 # the next 3 variables are referenced from openssl.cnnf
 export PROXY_PATHLENGTH=${PROXY_PATHLENGTH:-2}
 export PROXY_POLICY=${PROXY_POLICY:-normal_policy}
-export PROXY_STYLE=${PROXY_STYLE:-legacy_proxy}
+export PROXY_STYLE=${PROXY_STYLE:-rfc3820_proxy}
 X509_USERCERT=${X509_USERCERT:-$HOME/.globus/usercert.pem}
 X509_USERKEY=${X509_USERKEY:-$HOME/.globus/userkey.pem}
-BITS=${BITS:-512}
+BITS=${BITS:-1024}
 
 debug "Output File: $PROXY"
 
 OPENSSL="/usr/bin/openssl"
-vers="`$OPENSSL version 2> /dev/null`"
-if [ "$vers" == "${vers#OpenSSL 0.9.8}" ]
-then
-    OPENSSL="/usr/bin/openssl"
-    vers="`$OPENSSL version 2> /dev/null`"
-fi
-if [ "$vers" == "${vers#OpenSSL 0.9.8}" -a -x /opt/etoken-pro/bin/openssl ]
-then
-    OPENSSL="/opt/etoken-pro/bin/openssl"
-    vers="`$OPENSSL version 2> /dev/null`"
-fi
-if [ "$vers" == "${vers#OpenSSL 0.9.8}" ]
-then
-    echo "WARNING: cannot find openssl 0.9.8 binary." >&2
-    echo "WARNING: GT3/GT4/RFC3820 proxy generation might fail!" >&2
-fi
-debug "Using openssl command [$OPENSSL]"
 
 export OPENSSL_CONF=`mktemp openssl.cnf.XXXXXX`
 PROXYREQ=`mktemp proxyrequest.XXXXXX`
 PROXYKEY=`mktemp proxykey.XXXXXX`
 PROXYCERT=`mktemp proxykey.XXXXXX`
 RND=`expr $RANDOM \* $RANDOM`
+export MESSAGES=$( mktemp messages.XXXXXX )
 
 # Create openssl.cnf on the fly ...
 cat > $OPENSSL_CONF << EOF
@@ -216,7 +265,7 @@ info "Your identity: $SUBJ"
 debug "running 'openssl x509 -noout -in $X509_USERCERT -serial'"
 SERIAL=`$OPENSSL x509 -noout -in $X509_USERCERT -serial | sed -e s'/serial=//'`
 
-info "Certificate serial number: $SERIAL"
+debug "Certificate serial number: $SERIAL"
 
 if [ "$PROXY_STYLE" = "legacy_proxy" ]
 then
@@ -251,15 +300,21 @@ exitcode=$?
 
 if [ $exitcode -eq 0 ]
 then
+    touch "$PROXY" && chmod 0600 "$PROXY"
     cat $PROXYCERT $PROXYKEY $X509_USERCERT > "$PROXY"
-    chmod 600 "$PROXY"
 
     # simple proxy validation
     end_date=`$OPENSSL x509 -noout -enddate -in "$PROXY" | sed 's/notAfter=//'`
-    info "Your proxy is valid until: `date -d \"$end_date\"`"
+    info "Your proxy \`$PROXY' is valid until: `date -d \"$end_date\"`"
+else
+	if grep 'unable to load CA Private Key' < $MESSAGES &>/dev/null; then
+
+		debug "$( cat $MESSAGES )"
+		info "Error: Couldn't read user key in $X509_USERKEY."
+		debug "Given pass phrase might be incorrect."
+	fi
 fi
 
-rm $OPENSSL_CONF $PROXYCERT $PROXYKEY $PROXYREQ
+rm $OPENSSL_CONF $PROXYCERT $PROXYKEY $PROXYREQ $MESSAGES
 
 exit $exitcode
-

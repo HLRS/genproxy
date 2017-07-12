@@ -1,0 +1,87 @@
+.TH "GENPROXY" "1" "Jul 12, 2017" "genproxy 1.6" "User Commands"
+.SH NAME
+.PP
+\f[B]genproxy\f[] \- create GSI proxy credentials with just OpenSSL and
+Bash
+.SH SYNOPSIS
+.PP
+\f[B]genproxy [options]\f[]
+.SH DESCRIPTION
+.PP
+\f[B]genproxy\f[] is a Bash shell script that can be used to generate
+GSI proxy credentials (GPCs) like \f[B]grid\-proxy\-init(1)\f[] but with
+just \f[B]openssl(1)\f[] and without the need for the Globus Toolkit
+itself.
+.SH OPTIONS
+.PP
+The options are as follows:
+.SS \f[B][\-\-help]\f[]
+.PP
+Display susage.
+.SS \f[B][\-V, \-\-version]\f[]
+.PP
+Displays version.
+.SS \f[B][\-\-debug]\f[]
+.PP
+Enables extra output.
+.SS \f[B][\-q, \-\-quiet]\f[]
+.PP
+Quiet mode, minimal output.
+.SS \f[B][\-\-limited]\f[]
+.PP
+Creates a limited GSI proxy credential.
+.SS \f[B][\-\-old]\f[]
+.PP
+Creates a legacy globus proxy.
+.SS \f[B][\-\-gt3]\f[]
+.PP
+Creates a pre\-RFC3820 compliant proxy.
+.SS \f[B][\-\-rfc]\f[]
+.PP
+Creates a RFC3820 compliant proxy (default).
+.SS \f[B][\-d, \-\-days=N]\f[]
+.PP
+Number of days the proxy is valid (default=1).
+.SS \f[B][\-\-pcpl=N, \-\-path\-length=N]\f[]
+.PP
+Allow a chain of at most N proxies to be generated from this one
+(default=2).
+.SS \f[B][\-b, \-\-bits=N]\f[]
+.PP
+Number of bits in key (512, 1024, 2048, default=1024).
+.SS \f[B][\-\-cert=certfile]\f[]
+.PP
+Non\-standard location of user certificate.
+.SS \f[B][\-\-key=keyfile]\f[]
+.PP
+Non\-standard location of user key.
+.SS \f[B][\-o, \-\-out=proxyfile]\f[]
+.PP
+Non\-standard location of new proxy cert.
+.SH ENVIRONMENT VARIABLES
+.SS \f[B]X509_USER_PROXY\f[]
+.PP
+By default the genproxy tool uses a "non\-guessable" name for the
+generated GPC (created with \f[B]mktemp(1)\f[]).
+This is important on multi\-user hosts because otherwise symlink attacks
+are possible in \f[I]/tmp\f[] which can expose the GPC to other users.
+If you\[aq]re running genproxy from a single user host, as an
+alternative to the \f[B]\-\-out\f[] option, you can also predefine the
+path and name of the GPC in the environment variable
+\f[B]X509_USER_PROXY\f[] (for example with \f[B]export
+X509_USER_PROXY="$HOME/.globus/mygpc"\f[]).
+If both \f[B]X509_USER_PROXY\f[] is set and the \f[B]\-\-out\f[] option
+is used, the latter takes precedence!
+.SH FILES
+.SS \f[I]$HOME/.globus/usercert.pem\f[]
+.PP
+Your personal X.509 certificate.
+.SS \f[I]$HOME/.globus/userkey.pem\f[]
+.PP
+The matching private key to your personal X.509 certificate.
+.SH SEE ALSO
+.PP
+\f[B]openssl(1SSL)\f[], \f[B]grid\-proxy\-init(1)\f[],
+\f[B]mktemp(1)\f[]
+.SH AUTHORS
+Jan Just Keijser (Nikhef), Frank Scheiner (HLRS).
