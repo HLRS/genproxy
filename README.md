@@ -1,4 +1,4 @@
-# Genproxy - create GSI proxy credentials with just OpenSSL and Bash#
+# Genproxy - create GSI proxy credentials with just OpenSSL and Bash #
 
 The `genproxy` script can be used to generate a GSI proxy credential (GPC) just like `grid-proxy-init`. But this script:
 
