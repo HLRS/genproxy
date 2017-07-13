@@ -32,10 +32,16 @@
 # * the "-o" option was deactivated by accident in v1.5. This option now
 #   works again and takes precedence over the setting of the environment
 #   variable `X509_USER_PROXY`.
+#
+# $Id: genproxy,v 1.7 2017/07/13 fs $
+# 2017-07-12 Jan Just Keijser (Nikhef):
+# * Added support for other digest algorithms than SHA1.
+# 2017-07-13 Frank Scheiner (HLRS):
+# * Adapted help output.
 
 :<<COPYRIGHT
 
-Copyright (C) 2008 Jan Just Keijser, Nikhef
+Copyright (C) 2008, 2017 Jan Just Keijser, Nikhef
 Copyright (C) 2016-2017 Frank Scheiner, HLRS, Universitaet Stuttgart
 
 The program is distributed under the terms of the GNU General Public License
@@ -81,7 +87,7 @@ function run_cmd()
     if [ -n "${DEBUG:-}" ]
     then
         echo -e "run_cmd: $@"
-	eval "$@" 1>$MESSAGES 2>&1
+        eval "$@" 1>$MESSAGES 2>&1
         exitcode=$?
     else
         eval "$@" 1>$MESSAGES 2>&1
@@ -94,7 +100,7 @@ function run_cmd()
 # MAIN
 ###############################################################################
 
-VERSION="genproxy version 1.6"
+VERSION="genproxy version 1.7"
 USAGE="\
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
@@ -111,6 +117,8 @@ This script will generate a GSI proxy credential pretty much like globus' grid-p
   [--path-length=N] Allow a chain of at most N proxies to be generated
                     from this one (default=2).
   [--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
+  [--shaN]          SHA algorithm to use for the digest (e.g. 1 (for SHA1),
+                    256 (for SHA256), etc., default=1).
   [--cert=certfile] Non-standard location of user certificate.
   [--key=keyfile]   Non-standard location of user key.
   [--out=proxyfile] Non-standard location of new proxy cert.
@@ -124,68 +132,70 @@ while [ $# -gt 0 ]
 do
     case "$1" in
 		(--days|-d)		DAYS=$2
-#						VALID=`expr 24 \* $DAYS`:00
-						shift
-						;;
+#					VALID=`expr 24 \* $DAYS`:00
+					shift
+					;;
 		(--days=*)		DAYS=${1##--days=}
-#						VALID=`expr 24 \* $DAYS`:00
-						;;
+#					VALID=`expr 24 \* $DAYS`:00
+					;;
 #		(--valid)		VALID=$2
-#						shift
-#						;;
+#					shift
+#					;;
 #		(--valid=*)		VALID=${1##--valid=}
-#						;;
+#					;;
 		(--cert)		X509_USERCERT=$2
-						shift
-						;;
+					shift
+					;;
 		(--cert=*)		X509_USERCERT=${1##--cert=}
-						;;
+					;;
 		(--key)			X509_USERKEY=$2
-						shift
-						;;
+					shift
+					;;
 		(--key=*)		X509_USERKEY=${1##--key=}
-						;;
+					;;
 		(--out|-o)		X509_USERPROXY=$2
-						shift
-						;;
+					shift
+					;;
 		(--out=*)		X509_USERPROXY=${1##--out=}
-						;;
+					;;
 		(--pcpl)		PROXY_PATHLENGTH=$2
-						shift
-						;;
+					shift
+					;;
 		(--pcpl=*)		PROXY_PATHLENGTH=${1##--pcpl=}
-						;;
+					;;
 		(--path-length)		PROXY_PATHLENGTH=$2
-						shift
-						;;
+					shift
+					;;
 		(--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
-						;;
+					;;
 		(--version|-V)		echo "$VERSION"
-						exit 0
-						;;
+					exit 0
+					;;
 		(--debug)		DEBUG=1
-						QUIET=
-						;;
+					QUIET=
+					;;
 		(--quiet|-q)		QUIET=1
-						DEBUG=
-						;;
+					DEBUG=
+					;;
 		(--limited)		PROXY_POLICY=limited_policy
-						;;
+					;;
 		(--old)			PROXY_STYLE=legacy_proxy
-						;;
+					;;
 		(--gt3)			PROXY_STYLE=globus_proxy
-						;;
+					;;
 		(--rfc)			PROXY_STYLE=rfc3820_proxy
-						;;
+					;;
 		(--bits|-b)		BITS=$2
-						shift
-						;;
+					shift
+					;;
 		(--bits=*)		BITS=${1##--bits=}
-						;;
-	 	(*)				echo "$VERSION"
-						echo "$USAGE"
-						exit 0
-						;;
+					;;
+		(--sha*)		SHA_ALG=${1##--}
+					;;
+		(*)			echo "$VERSION"
+					echo "$USAGE"
+					exit 0
+					;;
 	esac
 	shift
 done
@@ -195,17 +205,16 @@ done
 # Apply defaults
 DAYS=${DAYS:-1}
 #VALID=${VALID:-12:00}
-if [[ ! -z "$X509_USERPROXY" ]]; then
-
-	PROXY="$X509_USERPROXY"
-
-elif [[ ! -z "$X509_USER_PROXY" ]]; then
-
-	PROXY="$X509_USER_PROXY"
+if [ ! -z "$X509_USERPROXY" ]
+then
+    PROXY="$X509_USERPROXY"
+elif [ ! -z "$X509_USER_PROXY" ]
+then
+    PROXY="$X509_USER_PROXY"
 else
-	PROXY_SUGGEST_START="x509up_p$$"
-	PROXY_SUGGEST=$( mktemp --tmpdir="/tmp" ${PROXY_SUGGEST_START}.fileXXXXXX.1 )
-	PROXY="$PROXY_SUGGEST"
+    PROXY_SUGGEST_START="x509up_p$$"
+    PROXY_SUGGEST=`mktemp --tmpdir="/tmp" ${PROXY_SUGGEST_START}.fileXXXXXX.1`
+    PROXY="$PROXY_SUGGEST"
 fi
 # the next 3 variables are referenced from openssl.cnnf
 export PROXY_PATHLENGTH=${PROXY_PATHLENGTH:-2}
@@ -214,6 +223,7 @@ export PROXY_STYLE=${PROXY_STYLE:-rfc3820_proxy}
 X509_USERCERT=${X509_USERCERT:-$HOME/.globus/usercert.pem}
 X509_USERKEY=${X509_USERKEY:-$HOME/.globus/userkey.pem}
 BITS=${BITS:-1024}
+SHA_ALG=${SHA_ALG:-sha1}
 
 debug "Output File: $PROXY"
 
@@ -224,7 +234,7 @@ PROXYREQ=`mktemp proxyrequest.XXXXXX`
 PROXYKEY=`mktemp proxykey.XXXXXX`
 PROXYCERT=`mktemp proxykey.XXXXXX`
 RND=`expr $RANDOM \* $RANDOM`
-export MESSAGES=$( mktemp messages.XXXXXX )
+export MESSAGES=`mktemp messages.XXXXXX`
 
 # Create openssl.cnf on the fly ...
 cat > $OPENSSL_CONF << EOF
@@ -287,14 +297,14 @@ fi
 
 
 run_cmd $OPENSSL req -new -nodes -keyout $PROXYKEY -out $PROXYREQ \
-	-newkey rsa:$BITS -subj \"$SUBJ/CN=$PROXY_SUBJ\"
+         -newkey rsa:$BITS -subj \"$SUBJ/CN=$PROXY_SUBJ\"
 
 run_cmd $OPENSSL x509 -req \
          -in $PROXYREQ \
          -CA $X509_USERCERT \
          -CAkey $X509_USERKEY \
          -out $PROXYCERT \
-         -set_serial $PROXY_SERIAL -sha1 -days $DAYS \
+         -set_serial $PROXY_SERIAL -${SHA_ALG} -days $DAYS \
          $PROXY_EXTENSIONS
 exitcode=$?
 
@@ -307,12 +317,12 @@ then
     end_date=`$OPENSSL x509 -noout -enddate -in "$PROXY" | sed 's/notAfter=//'`
     info "Your proxy \`$PROXY' is valid until: `date -d \"$end_date\"`"
 else
-	if grep 'unable to load CA Private Key' < $MESSAGES &>/dev/null; then
-
-		debug "$( cat $MESSAGES )"
-		info "Error: Couldn't read user key in $X509_USERKEY."
-		debug "Given pass phrase might be incorrect."
-	fi
+    if grep 'unable to load CA Private Key' < $MESSAGES &>/dev/null
+    then
+        debug `cat $MESSAGES`
+        info "Error: Couldn't read user key in $X509_USERKEY."
+        debug "Given pass phrase might be incorrect."
+    fi
 fi
 
 rm $OPENSSL_CONF $PROXYCERT $PROXYKEY $PROXYREQ $MESSAGES

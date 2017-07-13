@@ -1,4 +1,4 @@
-.TH "GENPROXY" "1" "Jul 12, 2017" "genproxy 1.6" "User Commands"
+.TH "GENPROXY" "1" "Jul 13, 2017" "genproxy 1.7" "User Commands"
 .SH NAME
 .PP
 \f[B]genproxy\f[] \- create GSI proxy credentials with just OpenSSL and
@@ -49,6 +49,10 @@ Allow a chain of at most N proxies to be generated from this one
 .SS \f[B][\-b, \-\-bits=N]\f[]
 .PP
 Number of bits in key (512, 1024, 2048, default=1024).
+.SS \f[B][\-\-shaN]\f[]
+.PP
+SHA algorithm to use for the digest (e.g.
+1 (for SHA1), 256 (for SHA256), etc., default=1).
 .SS \f[B][\-\-cert=certfile]\f[]
 .PP
 Non\-standard location of user certificate.

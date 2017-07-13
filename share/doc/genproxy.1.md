@@ -1,6 +1,6 @@
-% GENPROXY(1) genproxy 1.6 | User Commands
+% GENPROXY(1) genproxy 1.7 | User Commands
 % Jan Just Keijser (Nikhef), Frank Scheiner (HLRS)
-% Jul 12, 2017
+% Jul 13, 2017
 
 
 # NAME #
@@ -75,6 +75,11 @@ Allow a chain of at most N proxies to be generated from this one (default=2).
 ## **[-b, \--bits=N]** ##
 
 Number of bits in key (512, 1024, 2048, default=1024).
+
+
+## **[--shaN]** ##
+
+SHA algorithm to use for the digest (e.g. 1 (for SHA1), 256 (for SHA256), etc., default=1).
 
 
 ## **[\--cert=certfile]** ##
