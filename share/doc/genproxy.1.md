@@ -1,11 +1,11 @@
-% GENPROXY(1) genproxy 1.7 | User Commands
+% GENPROXY(1) genproxy 1.8 | User Commands
 % Jan Just Keijser (Nikhef), Frank Scheiner (HLRS)
-% Jul 13, 2017
+% Jul 20, 2017
 
 
 # NAME #
 
-**genproxy** - create GSI proxy credentials with just OpenSSL and Bash
+**genproxy** - create GSI proxy credentials with just OpenSSL and POSIX compatible shell
 
 
 # SYNOPSIS #
@@ -15,7 +15,7 @@
 
 # DESCRIPTION #
 
-**genproxy** is a Bash shell script that can be used to generate GSI proxy credentials (GPCs) like **grid-proxy-init(1)** but with just **openssl(1)** and without the need for the Globus Toolkit itself.
+**genproxy** is a POSIX shell script that can be used to generate GSI proxy credentials (GPCs) like **grid-proxy-init(1)** but with just **openssl(1)** and without the need for the Globus Toolkit itself.
 
 
 # OPTIONS #
@@ -119,3 +119,4 @@ The matching private key to your personal X.509 certificate.
 # SEE ALSO #
 
 **openssl(1SSL)**, **grid-proxy-init(1)**, **mktemp(1)**
+

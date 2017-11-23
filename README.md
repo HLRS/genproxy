@@ -1,8 +1,8 @@
-# Genproxy - create GSI proxy credentials with just OpenSSL and Bash #
+# Genproxy - create GSI proxy credentials with just OpenSSL and a POSIX compatible shell #
 
 The `genproxy` script can be used to generate a GSI proxy credential (GPC) just like `grid-proxy-init`. But this script:
 
-* is written as a Bash shell script
+* is written as a POSIX shell script
 * uses only OpenSSL commands to generate a proxy
 * uses none of the Globus Toolkit itself
 
@@ -10,7 +10,7 @@ Usage is as follows:
 
 ```
 $ ./genproxy --help
-genproxy version 1.7
+genproxy version 1.8
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
 Options

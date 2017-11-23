@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env sh
 # $Id: genproxy,v 1.2 2008/11/10 14:43:39 janjust Exp $
 # $Id: genproxy,v 1.3 2016/08/16 fs $
 # 2016-08-16 Frank Scheiner (HLRS):
@@ -38,6 +38,10 @@
 # * Added support for other digest algorithms than SHA1.
 # 2017-07-13 Frank Scheiner (HLRS):
 # * Adapted help output.
+#
+# $Id: genproxy,v 1.8 2017/07/20 fs $
+# 2017-07-20 Frank Scheiner (HLRS)
+# * Added support for NetBSD's sh (POSIX shell)
 
 :<<COPYRIGHT
 
@@ -65,7 +69,7 @@ COPYRIGHT
 # FUNCTIONS
 ###############################################################################
 
-function debug()
+debug()
 {
     if [ -n "${DEBUG:-}" ]
     then
@@ -73,7 +77,7 @@ function debug()
     fi
 }
 
-function info()
+info()
 {
     if [ -z "${QUIET:-}" ]
     then
@@ -81,7 +85,7 @@ function info()
     fi
 }
 
-function run_cmd()
+run_cmd()
 {
     local exitcode=0
     if [ -n "${DEBUG:-}" ]
@@ -100,7 +104,7 @@ function run_cmd()
 # MAIN
 ###############################################################################
 
-VERSION="genproxy version 1.7"
+VERSION="genproxy version 1.8"
 USAGE="\
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
@@ -131,68 +135,68 @@ QUIET=
 while [ $# -gt 0 ]
 do
     case "$1" in
-		(--days|-d)		DAYS=$2
+		--days|-d)		DAYS=$2
 #					VALID=`expr 24 \* $DAYS`:00
 					shift
 					;;
-		(--days=*)		DAYS=${1##--days=}
+		--days=*)		DAYS=${1##--days=}
 #					VALID=`expr 24 \* $DAYS`:00
 					;;
-#		(--valid)		VALID=$2
+#		--valid)		VALID=$2
 #					shift
 #					;;
-#		(--valid=*)		VALID=${1##--valid=}
+#		--valid=*)		VALID=${1##--valid=}
 #					;;
-		(--cert)		X509_USERCERT=$2
+		--cert)			X509_USERCERT=$2
 					shift
 					;;
-		(--cert=*)		X509_USERCERT=${1##--cert=}
+		--cert=*)		X509_USERCERT=${1##--cert=}
 					;;
-		(--key)			X509_USERKEY=$2
+		--key)			X509_USERKEY=$2
 					shift
 					;;
-		(--key=*)		X509_USERKEY=${1##--key=}
+		--key=*)		X509_USERKEY=${1##--key=}
 					;;
-		(--out|-o)		X509_USERPROXY=$2
+		--out|-o)		X509_USERPROXY=$2
 					shift
 					;;
-		(--out=*)		X509_USERPROXY=${1##--out=}
+		--out=*)		X509_USERPROXY=${1##--out=}
 					;;
-		(--pcpl)		PROXY_PATHLENGTH=$2
+		--pcpl)			PROXY_PATHLENGTH=$2
 					shift
 					;;
-		(--pcpl=*)		PROXY_PATHLENGTH=${1##--pcpl=}
+		--pcpl=*)		PROXY_PATHLENGTH=${1##--pcpl=}
 					;;
-		(--path-length)		PROXY_PATHLENGTH=$2
+		--path-length)		PROXY_PATHLENGTH=$2
 					shift
 					;;
-		(--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
+		--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
 					;;
-		(--version|-V)		echo "$VERSION"
+		--version|-V)		echo "$VERSION"
 					exit 0
 					;;
-		(--debug)		DEBUG=1
+		--debug)		DEBUG=1
 					QUIET=
 					;;
-		(--quiet|-q)		QUIET=1
+		--quiet|-q)		QUIET=1
 					DEBUG=
 					;;
-		(--limited)		PROXY_POLICY=limited_policy
+		--limited)		PROXY_POLICY=limited_policy
 					;;
-		(--old)			PROXY_STYLE=legacy_proxy
+		--old)			PROXY_STYLE=legacy_proxy
 					;;
-		(--gt3)			PROXY_STYLE=globus_proxy
+		--gt3)			PROXY_STYLE=globus_proxy
 					;;
-		(--rfc)			PROXY_STYLE=rfc3820_proxy
+		--rfc)			PROXY_STYLE=rfc3820_proxy
 					;;
-		(--bits|-b)		BITS=$2
+		--bits|-b)		BITS=$2
 					shift
 					;;
-		(--bits=*)		BITS=${1##--bits=}
+		--bits=*)		BITS=${1##--bits=}
 					;;
-		(--sha*)		SHA_ALG=${1##--}
+		--sha*)			SHA_ALG=${1##--}
 					;;
-		(*)			echo "$VERSION"
+		*)			echo "$VERSION"
 					echo "$USAGE"
 					exit 0
 					;;
@@ -213,7 +217,8 @@ then
     PROXY="$X509_USER_PROXY"
 else
     PROXY_SUGGEST_START="x509up_p$$"
-    PROXY_SUGGEST=`mktemp --tmpdir="/tmp" ${PROXY_SUGGEST_START}.fileXXXXXX.1`
+    # For OpenBSD's mktemp the template mustn't end in non X characters
+    PROXY_SUGGEST=`mktemp -p "/tmp" ${PROXY_SUGGEST_START}.fileXXXXXX`
     PROXY="$PROXY_SUGGEST"
 fi
 # the next 3 variables are referenced from openssl.cnnf
@@ -233,7 +238,9 @@ export OPENSSL_CONF=`mktemp openssl.cnf.XXXXXX`
 PROXYREQ=`mktemp proxyrequest.XXXXXX`
 PROXYKEY=`mktemp proxykey.XXXXXX`
 PROXYCERT=`mktemp proxykey.XXXXXX`
-RND=`expr $RANDOM \* $RANDOM`
+RANDOM1=`od -An -N1 -i /dev/urandom | grep -o [[:digit:]].*`
+RANDOM2=`od -An -N1 -i /dev/urandom | grep -o [[:digit:]].*`
+RND=`expr $RANDOM1 \* $RANDOM2`
 export MESSAGES=`mktemp messages.XXXXXX`
 
 # Create openssl.cnf on the fly ...
@@ -267,6 +274,10 @@ distinguished_name = req_distinguished_name
 
 [ req_distinguished_name ]
 EOF
+
+debug "DEBUG ENV ##########################################"
+[ "$DEBUG" = "1" ] && env
+debug "DEBUG ENV ##########################################"
 
 debug "running 'openssl x509 -noout -in $X509_USERCERT -subject'"
 SUBJ=`$OPENSSL x509 -noout -in $X509_USERCERT -subject | sed -e s'/subject= //'`
@@ -325,6 +336,11 @@ else
     fi
 fi
 
-rm $OPENSSL_CONF $PROXYCERT $PROXYKEY $PROXYREQ $MESSAGES
+# Don't remove temporary files when running in debug mode
+if [ "${DEBUG}EMPTY" = "EMPTY" ]
+then
+	rm $OPENSSL_CONF $PROXYCERT $PROXYKEY $PROXYREQ $MESSAGES
+fi
 
 exit $exitcode
+
