@@ -42,6 +42,10 @@
 # $Id: genproxy,v 1.8 2017/07/20 fs $
 # 2017-07-20 Frank Scheiner (HLRS)
 # * Added support for NetBSD's sh (POSIX shell)
+#
+# $Id: genproxy,v 1.9 2017/11/23 fs $
+# 2017-11-23 Frank Scheiner (HLRS)
+# * default to SHA256 for the digest algorithm
 
 :<<COPYRIGHT
 
@@ -104,7 +108,7 @@ run_cmd()
 # MAIN
 ###############################################################################
 
-VERSION="genproxy version 1.8"
+VERSION="genproxy version 1.9"
 USAGE="\
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
@@ -228,7 +232,7 @@ export PROXY_STYLE=${PROXY_STYLE:-rfc3820_proxy}
 X509_USERCERT=${X509_USERCERT:-$HOME/.globus/usercert.pem}
 X509_USERKEY=${X509_USERKEY:-$HOME/.globus/userkey.pem}
 BITS=${BITS:-1024}
-SHA_ALG=${SHA_ALG:-sha1}
+SHA_ALG=${SHA_ALG:-sha256}
 
 debug "Output File: $PROXY"
 

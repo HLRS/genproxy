@@ -10,7 +10,7 @@ Usage is as follows:
 
 ```
 $ ./genproxy --help
-genproxy version 1.8
+genproxy version 1.9
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
 Options
@@ -27,7 +27,7 @@ Options
 		  from this one (default=2).
 [--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
 [--shaN]          SHA algorithm to use for the digest (e.g. 1 (for SHA1),
-		  256 (for SHA256), etc., default=1).
+		  256 (for SHA256), etc., default=256).
 [--cert=certfile] Non-standard location of user certificate.
 [--key=keyfile]   Non-standard location of user key.
 [--out=proxyfile] Non-standard location of new proxy cert.

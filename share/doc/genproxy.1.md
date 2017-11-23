@@ -79,7 +79,7 @@ Number of bits in key (512, 1024, 2048, default=1024).
 
 ## **[--shaN]** ##
 
-SHA algorithm to use for the digest (e.g. 1 (for SHA1), 256 (for SHA256), etc., default=1).
+SHA algorithm to use for the digest (e.g. 1 (for SHA1), 256 (for SHA256), etc., default=256).
 
 
 ## **[\--cert=certfile]** ##
