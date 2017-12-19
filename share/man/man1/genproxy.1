@@ -1,8 +1,8 @@
-.TH "GENPROXY" "1" "Jul 20, 2017" "genproxy 1.8" "User Commands"
+.TH "GENPROXY" "1" "Dec 19, 2017" "genproxy 2.0" "User Commands"
 .SH NAME
 .PP
 \f[B]genproxy\f[] \- create GSI proxy credentials with just OpenSSL and
-POSIX compatible shell
+a POSIX compatible shell
 .SH SYNOPSIS
 .PP
 \f[B]genproxy [options]\f[]
@@ -45,7 +45,7 @@ Number of days the proxy is valid (default=1).
 .SS \f[B][\-\-pcpl=N, \-\-path\-length=N]\f[]
 .PP
 Allow a chain of at most N proxies to be generated from this one
-(default=2).
+(default=\-1, which is evaluated as unlimited).
 .SS \f[B][\-b, \-\-bits=N]\f[]
 .PP
 Number of bits in key (512, 1024, 2048, default=1024).
@@ -83,6 +83,19 @@ Your personal X.509 certificate.
 .SS \f[I]$HOME/.globus/userkey.pem\f[]
 .PP
 The matching private key to your personal X.509 certificate.
+.SH EXIT CODES
+.SS 1
+.PP
+GPC could not be created.
+.SS 2
+.PP
+Temporary file for operation could not be created.
+.SS 3
+.PP
+User certificate file could not be read.
+.SS 4
+.PP
+Given credentials were invalid.
 .SH SEE ALSO
 .PP
 \f[B]openssl(1SSL)\f[], \f[B]grid\-proxy\-init(1)\f[],
