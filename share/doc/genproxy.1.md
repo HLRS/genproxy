@@ -1,11 +1,11 @@
-% GENPROXY(1) genproxy 1.8 | User Commands
+% GENPROXY(1) genproxy 2.0 | User Commands
 % Jan Just Keijser (Nikhef), Frank Scheiner (HLRS)
-% Jul 20, 2017
+% Dec 19, 2017
 
 
 # NAME #
 
-**genproxy** - create GSI proxy credentials with just OpenSSL and POSIX compatible shell
+**genproxy** - create GSI proxy credentials with just OpenSSL and a POSIX compatible shell
 
 
 # SYNOPSIS #
@@ -69,7 +69,7 @@ Number of days the proxy is valid (default=1).
 
 ## **[\--pcpl=N, \--path-length=N]** ##
 
-Allow a chain of at most N proxies to be generated from this one (default=2).
+Allow a chain of at most N proxies to be generated from this one (default=-1, which is evaluated as unlimited).
 
 
 ## **[-b, \--bits=N]** ##
@@ -116,7 +116,25 @@ Your personal X.509 certificate.
 The matching private key to your personal X.509 certificate.
 
 
+# EXIT CODES #
+
+## 1 ##
+
+GPC could not be created.
+
+## 2 ##
+
+Temporary file for operation could not be created.
+
+## 3 ##
+
+User certificate file could not be read.
+
+## 4 ##
+
+Given credentials were invalid.
+
+
 # SEE ALSO #
 
 **openssl(1SSL)**, **grid-proxy-init(1)**, **mktemp(1)**
-

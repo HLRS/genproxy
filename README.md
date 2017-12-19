@@ -10,27 +10,27 @@ Usage is as follows:
 
 ```
 $ ./genproxy --help
-genproxy version 1.9
+genproxy version 2.0
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
-Options
-[--help]          Displays usage.
-[--version]       Displays version.
-[--debug]         Enables extra debug output.
-[--quiet]         Quiet mode, minimal output.
-[--limited]       Creates a limited globus proxy.
-[--old]           Creates a legacy globus proxy.
-[--gt3]           Creates a pre-RFC3820 compliant proxy.
-[--rfc]           Creates a RFC3820 compliant proxy (default).
-[--days=N]        Number of days the proxy is valid (default=1).
-[--path-length=N] Allow a chain of at most N proxies to be generated
-		  from this one (default=2).
-[--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
-[--shaN]          SHA algorithm to use for the digest (e.g. 1 (for SHA1),
-		  256 (for SHA256), etc., default=256).
-[--cert=certfile] Non-standard location of user certificate.
-[--key=keyfile]   Non-standard location of user key.
-[--out=proxyfile] Non-standard location of new proxy cert.
+  Options
+  [--help]          Displays usage.
+  [--version]       Displays version.
+  [--debug]         Enables extra debug output.
+  [--quiet]         Quiet mode, minimal output.
+  [--limited]       Creates a limited globus proxy.
+  [--old]           Creates a legacy globus proxy.
+  [--gt3]           Creates a pre-RFC3820 compliant proxy.
+  [--rfc]           Creates a RFC3820 compliant proxy (default).
+  [--days=N]        Number of days the proxy is valid (default=1).
+  [--path-length=N] Allow a chain of at most N proxies to be generated
+                    from this one (default=-1, which is evaluated as unlimited)
+  [--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
+  [--shaN]          SHA algorithm to use for the digest (e.g. 1 (for SHA1),
+                    256 (for SHA256), etc., default=256).
+  [--cert=certfile] Non-standard location of user certificate.
+  [--key=keyfile]   Non-standard location of user key.
+  [--out=proxyfile] Non-standard location of new proxy cert.
 ```
 
 Check the [genproxy(1)] manpage for further details.
@@ -41,7 +41,7 @@ Check the [genproxy(1)] manpage for further details.
 
 (GPLv3)
 
-Copyright (C) 2008, 2017 Jan Just Keijser, Nikhef  
+Copyright (C) 2008-2017 Jan Just Keijser, Nikhef  
 Copyright (C) 2016-2017 Frank Scheiner, HLRS, Universitaet Stuttgart
 
 The software is distributed under the terms of the GNU General Public License
