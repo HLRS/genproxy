@@ -1,4 +1,4 @@
-.TH "GENPROXY" "1" "Dec 19, 2017" "genproxy 2.0" "User Commands"
+.TH "GENPROXY" "1" "Apr 25, 2019" "genproxy 2.1" "User Commands"
 .SH NAME
 .PP
 \f[B]genproxy\f[] \- create GSI proxy credentials with just OpenSSL and
@@ -23,19 +23,22 @@ Display susage.
 Displays version.
 .SS \f[B][\-\-debug]\f[]
 .PP
-Enables extra output.
+Enables extra debug output (you can specify it multiple times).
 .SS \f[B][\-q, \-\-quiet]\f[]
 .PP
 Quiet mode, minimal output.
 .SS \f[B][\-\-limited]\f[]
 .PP
-Creates a limited GSI proxy credential.
+Creates a limited proxy.
+.SS \f[B][\-\-independent]\f[]
+.PP
+Creates a independent proxy.
+.SS \f[B][\-\-draft|\-\-gt3]\f[]
+.PP
+Creates a draft (GSI\-3) proxy.
 .SS \f[B][\-\-old]\f[]
 .PP
-Creates a legacy globus proxy.
-.SS \f[B][\-\-gt3]\f[]
-.PP
-Creates a pre\-RFC3820 compliant proxy.
+Creates a legacy proxy.
 .SS \f[B][\-\-rfc]\f[]
 .PP
 Creates a RFC3820 compliant proxy (default).
@@ -45,17 +48,17 @@ Number of days the proxy is valid (default=1).
 .SS \f[B][\-\-pcpl=N, \-\-path\-length=N]\f[]
 .PP
 Allow a chain of at most N proxies to be generated from this one
-(default=\-1, which is evaluated as unlimited).
+(default=\-1, i.e.
+unlimited).
 .SS \f[B][\-b, \-\-bits=N]\f[]
 .PP
 Number of bits in key (512, 1024, 2048, default=1024).
-.SS \f[B][\-\-shaN]\f[]
+.SS \f[B][\-\-shaNUM]\f[]
 .PP
-SHA algorithm to use for the digest (e.g.
-1 (for SHA1), 256 (for SHA256), etc., default=256).
+SHA hashing strength to use (default=sha256).
 .SS \f[B][\-\-cert=certfile]\f[]
 .PP
-Non\-standard location of user certificate.
+Non\-standard location of user certificate or PKCS#12 file.
 .SS \f[B][\-\-key=keyfile]\f[]
 .PP
 Non\-standard location of user key.
@@ -65,13 +68,8 @@ Non\-standard location of new proxy cert.
 .SH ENVIRONMENT VARIABLES
 .SS \f[B]X509_USER_PROXY\f[]
 .PP
-By default the genproxy tool uses a "non\-guessable" name for the
-generated GPC (created with \f[B]mktemp(1)\f[]).
-This is important on multi\-user hosts because otherwise symlink attacks
-are possible in \f[I]/tmp\f[] which can expose the GPC to other users.
-If you\[aq]re running genproxy from a single user host, as an
-alternative to the \f[B]\-\-out\f[] option, you can also predefine the
-path and name of the GPC in the environment variable
+As an alternative to the \f[B]\-\-out\f[] option, you can also predefine
+the path and name of the GPC in the environment variable
 \f[B]X509_USER_PROXY\f[] (for example with \f[B]export
 X509_USER_PROXY="$HOME/.globus/mygpc"\f[]).
 If both \f[B]X509_USER_PROXY\f[] is set and the \f[B]\-\-out\f[] option
@@ -83,6 +81,10 @@ Your personal X.509 certificate.
 .SS \f[I]$HOME/.globus/userkey.pem\f[]
 .PP
 The matching private key to your personal X.509 certificate.
+.SS \f[I]$HOME/.globus/usercred.p12\f[]
+.PP
+Your personal X.509 certificate and matching private key in a PKCS#12
+keystore.
 .SH EXIT CODES
 .SS 1
 .PP

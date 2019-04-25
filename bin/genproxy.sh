@@ -57,24 +57,19 @@
 # * Incorporated suggestions from MS
 # * Added checks (e.g. for existence, etc.) for used credentials
 #
-# $Id: genproxy,v 2.0 2017/12/21 janjust $
-# 2017-12-21 Jan Just Keijser (Nikhef)
-# * now can generate proxy credentials (PCs) from PCs in addition to PCs from non-PCs
-# * now supports independent PCs
-# * now includes "keyUsage" and "extendedKeyUsage" flags in PCs
-# * general cleanup
-# * now the UI more closely matches that of grid-proxy-init
+# $Id: genproxy,v 2.1 2019/05/02 fs $
+# 2018-02-02 Frank Scheiner (HLRS)
+# * adapted for POSIX shells (i.e. NetBSD's sh, OpenBSD's pdksh, Debian's dash, etc.)
 # 2018-02-02 Frank Scheiner (HLRS)
 # * remove keys from origin proxy credentials (PCs) (only affects cases where PCs are
 #   created from PCs, i.e. during delegation)
-#
-# $Id: genproxy,v 2.1 2019/04/18 fs $
-# 2018-02-02 Frank Scheiner (HLRS)
-# * adapted for POSIX shells (i.e. NetBSD's sh, OpenBSD's pdksh, Debian's dash, etc.)
 # 2018-02-08 Frank Scheiner (HLRS)
 # * fix random number generation for dash and NetBSD's POSIX shell
 # 2019-04-18 Frank Scheiner (HLRS)
 # * fix delegation
+# 2019-05-02 Frank Scheiner (HLRS)
+# * replace removal of private keys from origin proxy credentials (PCs) with keeping
+#   only PEM formatted certs from origin (proxy) credentials
 
 :<<COPYRIGHT
 
@@ -146,33 +141,28 @@ abort()
     exit ${exitcode}
 }
 
-strip_between_and_including()
+keep_only_pem_certs()
 {
-    # strip between and including $start and $end from $file
+    # only keep PEM formatted certs in given file
+    local file="$1"
 
-    local start="$1"
-    local end="$2"
-    local file="$3"
-
-    local between=0
+    local cert=0
     local temp_file=`mktemp -p "/tmp" temp_file.XXXXXX`
 
     # dash and NetBSD's POSIX shell require an argument after read specifying the
     # variable for the input
     while read REPLY
     do
-        if [ "$REPLY" = "$start" ]
+        if [ "$REPLY" = "-----BEGIN CERTIFICATE-----" ]
         then
-            between=1
-            continue
-        elif [ "$REPLY" = "$end" ]
+            cert=1
+            echo "$REPLY" >> "$temp_file"
+        elif [ "$REPLY" = "-----END CERTIFICATE-----" ]
         then
-            between=0
-            continue
-        elif [ $between -eq 1 ]
+            echo "$REPLY" >> "$temp_file"
+            cert=0
+        elif [ $cert -eq 1 ]
         then
-            continue
-        else
             echo "$REPLY" >> "$temp_file"
         fi
     done <"$file"
@@ -563,10 +553,9 @@ if [ $exitcode -eq 0 ]
 then
     exitcode=$?
     # when creating proxy credentials from proxy credentials (aka delegation),
-    # remove the private key from the original credentials (path in $TMP_USER_CERT) before
-    # concatenating the file to the delegated credential.
-    #sed -e "/-----BEGIN PRIVATE KEY-----/,/-----END PRIVATE KEY-----/d" -i "${TMP_USER_CERT}"
-    strip_between_and_including "-----BEGIN PRIVATE KEY-----" "-----END PRIVATE KEY-----" "${TMP_USER_CERT}"
+    # only keep the PEM certificates from the original credentials (path in
+    # $TMP_USER_CERT) before concatenating the file to the delegated credential.
+    keep_only_pem_certs "${TMP_USER_CERT}"
     cat "${PROXYCERT}" "${PROXYKEY}" "${TMP_USER_CERT}" > "$PROXY"
     # simple proxy validation
     end_date=`$OPENSSL x509 -noout -enddate -in "$PROXY" | sed 's/notAfter=//'`
