@@ -1,4 +1,4 @@
-#!//bin/bash
+#!/usr/bin/env sh
 # $Id: genproxy,v 1.2 2008/11/10 14:43:39 janjust Exp $
 # $Id: genproxy,v 1.3 2016/08/16 fs $
 # 2016-08-16 Frank Scheiner (HLRS):
@@ -56,11 +56,30 @@
 # * Incorporated and adapted changes by JJK into the POSIX shell version
 # * Incorporated suggestions from MS
 # * Added checks (e.g. for existence, etc.) for used credentials
+#
+# $Id: genproxy,v 2.0 2017/12/21 janjust $
+# 2017-12-21 Jan Just Keijser (Nikhef)
+# * now can generate proxy credentials (PCs) from PCs in addition to PCs from non-PCs
+# * now supports independent PCs
+# * now includes "keyUsage" and "extendedKeyUsage" flags in PCs
+# * general cleanup
+# * now the UI more closely matches that of grid-proxy-init
+# 2018-02-02 Frank Scheiner (HLRS)
+# * remove keys from origin proxy credentials (PCs) (only affects cases where PCs are
+#   created from PCs, i.e. during delegation)
+#
+# $Id: genproxy,v 2.1 2019/04/18 fs $
+# 2018-02-02 Frank Scheiner (HLRS)
+# * adapted for POSIX shells (i.e. NetBSD's sh, OpenBSD's pdksh, Debian's dash, etc.)
+# 2018-02-08 Frank Scheiner (HLRS)
+# * fix random number generation for dash and NetBSD's POSIX shell
+# 2019-04-18 Frank Scheiner (HLRS)
+# * fix delegation
 
 :<<COPYRIGHT
 
 Copyright (C) 2008-2017 Jan Just Keijser, Nikhef
-Copyright (C) 2016-2017 Frank Scheiner, HLRS, Universitaet Stuttgart
+Copyright (C) 2016-2019 Frank Scheiner, HLRS, Universitaet Stuttgart
 
 The program is distributed under the terms of the GNU General Public License
 
@@ -83,7 +102,7 @@ COPYRIGHT
 # FUNCTIONS
 ###############################################################################
 
-function debug()
+debug()
 {
     if [ ${DEBUG} -gt 0 ]
     then
@@ -91,7 +110,7 @@ function debug()
     fi
 }
 
-function debug2()
+debug2()
 {
     if [ ${DEBUG} -gt 1 ]
     then
@@ -99,7 +118,7 @@ function debug2()
     fi
 }
 
-function info()
+info()
 {
     if [ ${QUIET} -eq 0 ]
     then
@@ -107,7 +126,7 @@ function info()
     fi
 }
 
-function do_cleanup()
+do_cleanup()
 {
     # Use quotes around file names in case $TMP contains spaces
     rm -f "${OPENSSL_CONF}" "${TMP_USER_CERT}" "${PROXYCERT}" "${PROXYKEY}" "${PROXYREQ}"
@@ -119,7 +138,7 @@ function do_cleanup()
     stty sane
 }
 
-function abort()
+abort()
 {
     exitcode=$1
     shift
@@ -127,12 +146,61 @@ function abort()
     exit ${exitcode}
 }
 
+strip_between_and_including()
+{
+    # strip between and including $start and $end from $file
+
+    local start="$1"
+    local end="$2"
+    local file="$3"
+
+    local between=0
+    local temp_file=`mktemp -p "/tmp" temp_file.XXXXXX`
+
+    # dash and NetBSD's POSIX shell require an argument after read specifying the
+    # variable for the input
+    while read REPLY
+    do
+        if [ "$REPLY" = "$start" ]
+        then
+            between=1
+            continue
+        elif [ "$REPLY" = "$end" ]
+        then
+            between=0
+            continue
+        elif [ $between -eq 1 ]
+        then
+            continue
+        else
+            echo "$REPLY" >> "$temp_file"
+        fi
+    done <"$file"
+
+    mv "$temp_file" "$file"
+
+    return
+}
+
+exists()
+{
+    local file="$1"
+
+    if [ ! -e "$file" ]
+    then
+        echo "$file - ENOENT (No such file or directory)"
+        return 2
+    else
+        echo "$file"
+        return 0
+    fi
+}
 
 ###############################################################################
 # MAIN
 ###############################################################################
 
-VERSION="genproxy version 2.0"
+VERSION="genproxy version 2.1"
 USAGE="\
 This script will generate a GSI proxy credential pretty much like globus' grid-proxy-init
 
@@ -148,7 +216,7 @@ This script will generate a GSI proxy credential pretty much like globus' grid-p
   [--rfc]           Creates a RFC3820 compliant proxy (default).
   [--days=N]        Number of days the proxy is valid (default=1).
   [--path-length=N] Allow a chain of at most N proxies to be generated
-                    from this one (default=2).
+                    from this one (default=-1, i.e. unlimited).
   [--bits=N]        Number of bits in key (512, 1024, 2048, default=1024).
   [--shaNUM]        SHA hashing strength to use (default=sha256).
   [--cert=certfile] Non-standard location of user certificate or PKCS#12 file.
@@ -163,72 +231,72 @@ QUIET=0
 while [ $# -gt 0 ]
 do
     case "$1" in
-		(--days|-d)		DAYS=$2
+		--days|-d)		DAYS=$2
 #						VALID=`expr 24 \* $DAYS`:00
 						shift
 						;;
-		(--days=*)		DAYS=${1##--days=}
+		--days=*)		DAYS=${1##--days=}
 #						VALID=`expr 24 \* $DAYS`:00
 						;;
-#		(--valid)		VALID=$2
+#		--valid)		VALID=$2
 #						shift
 #						;;
-#		(--valid=*)		VALID=${1##--valid=}
+#		--valid=*)		VALID=${1##--valid=}
 #						;;
-		(--cert)		X509_USER_CERT=$2
+		--cert) 		X509_USER_CERT=$2
 						shift
 						;;
-		(--cert=*)		X509_USER_CERT=${1##--cert=}
+		--cert=*)		X509_USER_CERT=${1##--cert=}
 						;;
-		(--key)			X509_USER_KEY=$2
+		--key)			X509_USER_KEY=$2
 						shift
 						;;
-		(--key=*)		X509_USER_KEY=${1##--key=}
+		--key=*)		X509_USER_KEY=${1##--key=}
 						;;
-		(--out|-o)		X509_USER_PROXY=$2
+		--out|-o)		X509_USER_PROXY=$2
 						shift
 						;;
-		(--out=*)		X509_USER_PROXY=${1##--out=}
+		--out=*)		X509_USER_PROXY=${1##--out=}
 						;;
-		(--pcpl)		PROXY_PATHLENGTH=$2
+		--pcpl) 		PROXY_PATHLENGTH=$2
 						shift
 						;;
-		(--pcpl=*)		PROXY_PATHLENGTH=${1##--pcpl=}
+		--pcpl=*)		PROXY_PATHLENGTH=${1##--pcpl=}
 						;;
-		(--path-length)		PROXY_PATHLENGTH=$2
+		--path-length)		PROXY_PATHLENGTH=$2
 						shift
 						;;
-		(--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
+		--path-length=*)	PROXY_PATHLENGTH=${1##--path-length=}
 						;;
-		(--version|-V)	echo "$VERSION"
+		--version|-V)	echo "$VERSION"
 						exit 0
 						;;
-		(--debug)		let DEBUG=$DEBUG+1
+		--debug)		DEBUG=$(( $DEBUG + 1 ))
 						QUIET=0
 						;;
-		(--quiet|-q)	QUIET=1
+		--quiet|-q)	QUIET=1
 						DEBUG=0
 						;;
-		(--limited)		PROXY_POLICY=limited_policy
+		--limited)		PROXY_POLICY=limited_policy
 						;;
-		(--independent)	PROXY_POLICY=independent_policy
+		--independent)	PROXY_POLICY=independent_policy
 						;;
-		(--old)			PROXY_STYLE=legacy_proxy
+		--old)			PROXY_STYLE=legacy_proxy
 						;;
-		(--draft)		PROXY_STYLE=globus_proxy
+		--draft)		PROXY_STYLE=globus_proxy
 						;;
-		(--gt3)			PROXY_STYLE=globus_proxy
+		--gt3)			PROXY_STYLE=globus_proxy
 						;;
-		(--rfc)			PROXY_STYLE=rfc3820_proxy
+		--rfc)			PROXY_STYLE=rfc3820_proxy
 						;;
-		(--bits|-b)		BITS=$2
+		--bits|-b)		BITS=$2
 						shift
 						;;
-		(--bits=*)		BITS=${1##--bits=}
+		--bits=*)		BITS=${1##--bits=}
 						;;
-		(--sha*)		SHA_ALG=${1##--}
+		--sha*) 		SHA_ALG=${1##--}
 						;;
-		(*)				echo "$VERSION"
+		*)				echo "$VERSION"
 						echo "$USAGE"
 						exit 0
 						;;
@@ -255,7 +323,6 @@ X509_USER_KEY="${X509_USER_KEY:-$HOME/.globus/userkey.pem}"
 BITS=${BITS:-1024}
 SHA_ALG=${SHA_ALG:-sha256}
 OPENSSL="/usr/bin/openssl"
-#OPENSSL="/home/janjust/src/openssl-1.1.0g/apps/openssl"
 key_format=pem
 remove_proxy_on_exit=0
 
@@ -267,10 +334,11 @@ fi
 
 unset TMP_USER_CERT
 
-debug "User Cert File: $X509_USER_CERT"
-debug "User Key File: $X509_USER_KEY"
+debug "User Cert File: `exists "$X509_USER_CERT"`"
+debug "User Key File: `exists "$X509_USER_KEY"`"
+debug "User PKCS#12 File: `exists "$X509_P12CRED"`"
 debug ""
-debug "Output File: $PROXY"
+debug "Output File: `exists "$PROXY"`"
 
 # Check if we already own the proxy file. If not, check that we can create it
 if [ ! -O "${PROXY}" ]
@@ -291,24 +359,40 @@ then
     abort 3 "Could not create temporary file in ${TMP}."
 fi
 
-debug2 "running 'openssl x509 -noout -in $X509_USER_CERT -subject'"
+debug2 "running '$OPENSSL x509 -noout -in $X509_USER_CERT -subject'"
 SUBJECT=`$OPENSSL x509 -noout -in "${X509_USER_CERT}" -subject 2> /dev/null`
 if [ $? -eq 0 ]
 then
-    # copy the file, as TMP_USER_CERT is removed upon exit
-    cat "${X509_USER_CERT}" > "${TMP_USER_CERT}"
+    if [ ! -e ${X509_USER_KEY} ]
+    then
+        info "Error: Couldn't find valid credentials to generate a proxy."
+        if [ $DEBUG -eq 0 ]
+        then
+            info "Use --debug for further information."
+        fi
+        exit 1
+    else
+        # copy the file, as TMP_USER_CERT is removed upon exit
+        cat "${X509_USER_CERT}" > "${TMP_USER_CERT}"
+    fi
 else
     debug2 "$X509_USER_CERT does not appear to be a valid PEM encoded certificate, trying PKCS#12"
+    stty -echo
     echo -n "Enter GRID pass phrase: "
-    read -s gridpassphrase
+    read gridpassphrase
+    stty echo
     echo
     if [ $QUIET -eq 0 ]
     then
         $OPENSSL pkcs12 -in "${X509_P12CRED}" -clcerts -nokeys -out "${TMP_USER_CERT}" \
-         -passin stdin <<< "${gridpassphrase}"
+         -passin stdin <<EOF
+${gridpassphrase}
+EOF
     else
         $OPENSSL pkcs12 -in "${X509_P12CRED}" -clcerts -nokeys -out "${TMP_USER_CERT}" \
-         -passin stdin <<< "${gridpassphrase}" 2> /dev/null
+         -passin stdin 2>/dev/null <<EOF
+${gridpassphrase}
+EOF
     fi
     if [ $? -eq 0 ]
     then
@@ -327,7 +411,7 @@ ident="${SUBJ%%/CN=limited proxy*}"
 ident="${SUBJ%%/CN=[0-9][0-9][0-9][0-9]*}"
 info "Your identity: ${ident}"
 
-debug2 "running 'openssl x509 -noout -in $TMP_USER_CERT -serial'"
+debug2 "running '$OPENSSL x509 -noout -in $TMP_USER_CERT -serial'"
 SERIAL=`$OPENSSL x509 -noout -in "${TMP_USER_CERT}" -serial | sed -e s'/serial= *//'`
 debug2 "Certificate serial number: $SERIAL"
 
@@ -335,15 +419,17 @@ if [ "${key_format}" = "pem" ]
 then
     # check if the private key has no passphrase
     # This is acceptable if we're generating a proxy from a proxy)
-    debug2 "running 'openssl rsa -check -noout -in ${X509_USER_KEY} -passin stdin'"
-    echo | openssl rsa -check -noout -in "${X509_USER_KEY}" -passin stdin > /dev/null 2>&1
+    debug2 "running '$OPENSSL rsa -check -noout -in ${X509_USER_KEY} -passin stdin'"
+    echo "    " | $OPENSSL rsa -check -noout -in "${X509_USER_KEY}" -passin stdin > /dev/null 2>&1
     if [ $? -eq 0 ]
     then
         debug2 "private key has no passphrase, hopefully it's a proxy certificate"
         gridpassphrase=""
     else
+        stty -echo
         echo -n "Enter GRID pass phrase for this identity: "
-        read -s gridpassphrase
+        read gridpassphrase
+        stty echo
         echo
     fi
 fi
@@ -368,8 +454,21 @@ then
 else
     # for non-legacy proxies, the proxy policy (limited, normal) is implemented
     # using X509v3 extensions, which are loaded from the 'extfile'
-    RND=`expr $RANDOM \* $RANDOM`
-    PROXY_SUBJ="$RND"
+    os_name=`uname -s`
+    if [ "$os_name" = "Linux" -o "$os_name" = "NetBSD" ]
+    then
+        # There is no $RANDOM in dash nor in NetBSD's POSIX shell
+        RND="0x`${OPENSSL} rand -hex 4`"
+        # '%ld' only works on Linux, but '%d' works even for 0xFFFFFFFF on
+        # NetBSD and Linux but not on OpenBSD whose max decimal printout might
+        # depend on the architecture
+        PROXY_SUBJ=`printf "%d" $RND`
+    elif [ "$os_name" = "OpenBSD" ]
+    then
+        # OpenBSD's pdksh has $RANDOM
+        RND=`expr $RANDOM \* $RANDOM`
+        PROXY_SUBJ=$RND
+    fi
     PROXY_SERIAL="$RND"
     if [ ${PROXY_PATHLENGTH} -ge 0 ]
     then
@@ -380,7 +479,7 @@ fi
 
 
 # Create openssl.cnf on the fly ...
-cat > $OPENSSL_CONF << EOF
+cat > $OPENSSL_CONF <<EOF
 extensions = ${PROXY_STYLE}
 
 [ legacy_proxy ]
@@ -421,7 +520,7 @@ distinguished_name = req_distinguished_name
 EOF
 
 
-debug2 "running 'openssl req -new -nodes -keyout ${PROXYKEY} -out ${PROXYREQ} \
+debug2 "running '$OPENSSL req -new -nodes -keyout ${PROXYKEY} -out ${PROXYREQ} \
     -newkey rsa:$BITS -subj \"$SUBJ/CN=$PROXY_SUBJ\"'"
 if [ $QUIET -eq 0 ]
 then
@@ -436,7 +535,9 @@ then
      -out "${PROXYCERT}" \
      -set_serial ${PROXY_SERIAL} -${SHA_ALG} -days $DAYS \
      ${PROXY_EXTENSIONS} \
-     -passin stdin <<< "${gridpassphrase}"
+     -passin stdin <<EOF
+${gridpassphrase}
+EOF
 else
     $OPENSSL req -new -nodes -keyout "${PROXYKEY}" -out "${PROXYREQ}" \
      -newkey rsa:$BITS -subj "$SUBJ/CN=$PROXY_SUBJ" 2> /dev/null
@@ -449,7 +550,9 @@ else
      -out "${PROXYCERT}" \
      -set_serial ${PROXY_SERIAL} -${SHA_ALG} -days $DAYS \
      ${PROXY_EXTENSIONS} \
-     -passin stdin <<< "${gridpassphrase}" 2> /dev/null
+     -passin stdin 2>/dev/null <<EOF
+${gridpassphrase}
+EOF
 fi
 exitcode=$?
 
@@ -459,6 +562,11 @@ unset gridpassphrase
 if [ $exitcode -eq 0 ]
 then
     exitcode=$?
+    # when creating proxy credentials from proxy credentials (aka delegation),
+    # remove the private key from the original credentials (path in $TMP_USER_CERT) before
+    # concatenating the file to the delegated credential.
+    #sed -e "/-----BEGIN PRIVATE KEY-----/,/-----END PRIVATE KEY-----/d" -i "${TMP_USER_CERT}"
+    strip_between_and_including "-----BEGIN PRIVATE KEY-----" "-----END PRIVATE KEY-----" "${TMP_USER_CERT}"
     cat "${PROXYCERT}" "${PROXYKEY}" "${TMP_USER_CERT}" > "$PROXY"
     # simple proxy validation
     end_date=`$OPENSSL x509 -noout -enddate -in "$PROXY" | sed 's/notAfter=//'`
@@ -469,4 +577,6 @@ else
     info "Error: Couldn't read user key in $X509_USER_KEY."
     debug2 "Given pass phrase might be incorrect."
 fi
+
+exit $exitcode
 
