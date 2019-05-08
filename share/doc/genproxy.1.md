@@ -1,6 +1,6 @@
-% GENPROXY(1) genproxy 2.0 | User Commands
+% GENPROXY(1) genproxy 2.1 | User Commands
 % Jan Just Keijser (Nikhef), Frank Scheiner (HLRS)
-% Dec 19, 2017
+% Apr 25, 2019
 
 
 # NAME #
@@ -34,7 +34,7 @@ Displays version.
 
 ## **[\--debug]** ##
 
-Enables extra output.
+Enables extra debug output (you can specify it multiple times).
 
 
 ## **[-q, \--quiet]** ##
@@ -44,17 +44,22 @@ Quiet mode, minimal output.
 
 ## **[\--limited]** ##
 
-Creates a limited GSI proxy credential.
+Creates a limited proxy.
+
+
+## **[\--independent]** ##
+
+Creates a independent proxy.
+
+
+## **[\--draft|--gt3]** ##
+
+Creates a draft (GSI-3) proxy.
 
 
 ## **[\--old]** ##
 
-Creates a legacy globus proxy.
-
-
-## **[\--gt3]** ##
-
-Creates a pre-RFC3820 compliant proxy.
+Creates a legacy proxy.
 
 
 ## **[\--rfc]** ##
@@ -69,7 +74,7 @@ Number of days the proxy is valid (default=1).
 
 ## **[\--pcpl=N, \--path-length=N]** ##
 
-Allow a chain of at most N proxies to be generated from this one (default=-1, which is evaluated as unlimited).
+Allow a chain of at most N proxies to be generated from this one (default=-1, i.e. unlimited).
 
 
 ## **[-b, \--bits=N]** ##
@@ -77,14 +82,14 @@ Allow a chain of at most N proxies to be generated from this one (default=-1, wh
 Number of bits in key (512, 1024, 2048, default=1024).
 
 
-## **[--shaN]** ##
+## **[--shaNUM]** ##
 
-SHA algorithm to use for the digest (e.g. 1 (for SHA1), 256 (for SHA256), etc., default=256).
+SHA hashing strength to use (default=sha256).
 
 
 ## **[\--cert=certfile]** ##
 
-Non-standard location of user certificate.
+Non-standard location of user certificate or PKCS#12 file.
 
 
 ## **[\--key=keyfile]** ##
@@ -101,7 +106,7 @@ Non-standard location of new proxy cert.
 
 ## **X509_USER_PROXY** ##
 
-By default the genproxy tool uses a "non-guessable" name for the generated GPC (created with **mktemp(1)**). This is important on multi-user hosts because otherwise symlink attacks are possible in _/tmp_ which can expose the GPC to other users. If you're running genproxy from a single user host, as an alternative to the **--out** option, you can also predefine the path and name of the GPC in the environment variable **X509_USER_PROXY** (for example with **export X509_USER_PROXY="$HOME/.globus/mygpc"**). If both **X509_USER_PROXY** is set and the **--out** option is used, the latter takes precedence!
+As an alternative to the **--out** option, you can also predefine the path and name of the GPC in the environment variable **X509_USER_PROXY** (for example with **export X509_USER_PROXY="$HOME/.globus/mygpc"**). If both **X509_USER_PROXY** is set and the **--out** option is used, the latter takes precedence!
 
 
 # FILES #
@@ -114,6 +119,11 @@ Your personal X.509 certificate.
 ## _$HOME/.globus/userkey.pem_ ##
 
 The matching private key to your personal X.509 certificate.
+
+
+## _$HOME/.globus/usercred.p12_ ##
+
+Your personal X.509 certificate and matching private key in a PKCS#12 keystore.
 
 
 # EXIT CODES #
@@ -138,3 +148,4 @@ Given credentials were invalid.
 # SEE ALSO #
 
 **openssl(1SSL)**, **grid-proxy-init(1)**, **mktemp(1)**
+
